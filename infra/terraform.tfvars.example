@@ -21,5 +21,11 @@ hosted_zone_name = "pixelzoom.app"
 # 확인: aws iam list-open-id-connect-providers
 # create_oidc_provider = true
 
+# 월 예산 알림을 받을 주소. 비워 두면 예산을 만들지 않습니다.
+# IAM 사용자별로는 나눌 수 없습니다 — 비용은 계정에 귀속됩니다.
+# budget_alert_emails = ["your@email"]
+# monthly_budget_usd  = 5
+# budget_scope        = "account"   # "project"로 좁히면 Route 53 영역이 빠집니다
+
 # log_retention_days = 14
 # lambda_memory_mb   = 2048

@@ -17,6 +17,7 @@
 | ACM 인증서 (us-east-1) | CloudFront가 붙일 수 있는 유일한 리전 |
 | Route 53 레코드 | 도메인 A/AAAA 별칭과 인증서 검증 |
 | CloudFront Function | `www` → apex 301. 정본 주소를 하나로 모은다 |
+| Budgets 예산 (선택) | 월 한도 알림. `budget_alert_emails`를 채우면 생성 |
 | GitHub OIDC 공급자 + IAM 역할 | 장기 액세스 키 없이 배포 |
 
 ## 사전 준비
@@ -50,21 +51,37 @@ terraform init
 terraform apply -target=aws_ecr_repository.backend
 ```
 
-### 2단계 — 부트스트랩 이미지 밀어 넣기
+PowerShell에서는 타깃을 **따옴표로 묶어야** 합니다. 안 그러면 인수가 쪼개져
+Terraform이 `Invalid target`으로 거절합니다.
 
-```bash
-REGION=$(terraform output -raw aws_region)
-REPO=$(terraform output -raw ecr_repository_url)
-
-aws ecr get-login-password --region "$REGION" \
-  | docker login --username AWS --password-stdin "${REPO%%/*}"
-
-cd ../backend
-docker buildx build --platform linux/arm64 --provenance=false \
-  -t "$REPO:bootstrap" --push .
-cd ../infra
+```powershell
+terraform apply -target="aws_ecr_repository.backend"
 ```
 
+### 2단계 — 부트스트랩 이미지 밀어 넣기
+
+`terraform output`은 쓰지 않습니다. **`-target`을 준 apply는 출력값을 state에
+쓰지 않으므로** 이 시점에는 비어 있고, 빈 리전으로 로그인을 시도하면
+`Invalid endpoint: https://api.ecr..amazonaws.com`으로 실패합니다. 값은 AWS에
+직접 묻습니다.
+
+```bash
+cd /f/GitHub/PixelZoom-Team/pixelzoom-web/backend
+
+# terraform output은 쓰지 않는다. -target을 준 apply는 출력값을 state에 쓰지
+# 않으므로 이 시점에는 비어 있다. 값은 AWS에 직접 묻는 편이 확실하다.
+REGION=$(aws configure get region)
+REPO=$(aws ecr describe-repositories --repository-names pixelzoom-backend --region "$REGION" --query 'repositories[0].repositoryUri' --output text)
+
+echo "region=$REGION"
+echo "repo=$REPO"
+
+aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "${REPO%%/*}"
+
+docker buildx build --platform linux/arm64 --provenance=false -t "$REPO:bootstrap" --push .
+```
+
+빌드가 끝나면 `cd ../infra`로 돌아옵니다.
 `--platform linux/arm64`가 빠지면 함수가 아예 뜨지 않습니다. Graviton을 고른
 이유는 ADR-003에 있습니다.
 
@@ -178,6 +195,12 @@ ADR-003의 계산 그대로입니다. 워크로드가 Lambda 영구 무료 티�
 
 Provisioned Concurrency는 콜드 스타트를 없애 주지만 상시 과금이라 무료 티어를
 깨뜨립니다. 의도적으로 쓰지 않습니다(ADR-003).
+
+`budget_alert_emails`에 주소를 넣으면 월 예산 알림이 함께 생깁니다. IAM
+사용자별로는 나눌 수 없습니다 — 비용은 계정에 귀속되지 IAM 주체에 귀속되지
+않습니다. 태그 기준(`budget_scope = "project"`)은 가능하지만 Route 53 호스팅
+영역이 빠집니다. 그 영역은 이 스택이 만들지 않아 태그가 없고, 하필 이 구성에서
+유일하게 확실히 청구되는 항목입니다.
 
 ## 상태 파일
 

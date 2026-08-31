@@ -140,6 +140,49 @@ variable "log_retention_days" {
   default     = 14
 }
 
+variable "budget_alert_emails" {
+  description = <<-EOT
+    월 예산 알림을 받을 주소. 비워 두면 예산 자체를 만들지 않는다.
+
+    **IAM 사용자별 예산은 만들 수 없다.** 비용은 계정에 귀속되지 IAM 주체에
+    귀속되지 않아서, Budgets가 나눌 수 있는 축은 서비스·연결 계정·태그뿐이다.
+    이 스택은 모든 자원에 Project 태그를 붙이므로 태그 기준으로 좁힐 수는 있다
+    (budget_scope 참고).
+  EOT
+  type        = list(string)
+  default     = []
+}
+
+variable "monthly_budget_usd" {
+  description = <<-EOT
+    월 예산 한도(달러). 이 구성은 정상이면 $1 아래다 — Route 53 호스팅 영역
+    $0.50과 ECR 저장 용량이 전부다. 기본값 5는 '뭔가 잘못됐다'를 알아채기에
+    충분히 낮고, 정상 변동에 오탐이 나지 않을 만큼은 높은 값이다.
+  EOT
+  type        = number
+  default     = 5
+}
+
+variable "budget_scope" {
+  description = <<-EOT
+    "account"면 계정 전체, "project"면 Project 태그가 붙은 자원만 센다.
+
+    기본값이 account인 이유는 놓치는 것이 없기 때문이다. project로 좁히면
+    **Route 53 호스팅 영역이 빠진다** — 그 영역은 이 스택이 만들지 않아 태그가
+    없고, 공교롭게도 이 구성에서 유일하게 확실히 청구되는 항목이다.
+
+    project를 쓰려면 결제 콘솔에서 Project를 비용 할당 태그로 활성화해야 하고,
+    활성화 이후의 사용량부터만 집계된다(소급되지 않는다).
+  EOT
+  type        = string
+  default     = "account"
+
+  validation {
+    condition     = contains(["account", "project"], var.budget_scope)
+    error_message = "budget_scope는 account 또는 project여야 합니다."
+  }
+}
+
 variable "cloudfront_price_class" {
   description = <<-EOT
     PriceClass_100은 북미·유럽뿐이라 한국 사용자가 먼 엣지로 붙는다.
