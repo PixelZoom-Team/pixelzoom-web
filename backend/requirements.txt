@@ -1,0 +1,38 @@
+# 런타임 의존성 — 정확히 고정한다.
+#
+# 범위 지정(~=)으로 두면 커밋을 바꾸지 않아도 빌드마다 다른 버전이 깔린다.
+# 로컬에서 통과한 조합과 Lambda에 올라가는 조합이 달라질 수 있다는 뜻이고,
+# 그러면 "로컬에서는 됐는데"가 구조적으로 가능해진다.
+#
+# 아래 버전들은 로컬 테스트와 브라우저 E2E를 통과한 조합이며, 네이티브 확장을
+# 갖는 셋(numpy, opencv-python-headless, pydantic-core)은 목표 환경인
+# cp313 · manylinux aarch64 휠이 PyPI에 존재함을 확인했다(실제 이미지 빌드로
+# 검증). boto3 계열은 순수 파이썬이라 아키텍처를 타지 않는다.
+#
+# 갱신할 때: 직접 의존성 버전을 올린 뒤 빈 가상환경에 설치하고 pip freeze로
+# 아래 전이 목록을 다시 뽑는다.
+
+# --- 직접 의존성 ---
+boto3==1.43.84
+fastapi==0.141.1
+mangum==0.22.0
+numpy==2.5.2
+opencv-python-headless==4.14.0.94
+pydantic==2.13.5
+python-multipart==0.0.32
+
+# --- 전이 의존성 ---
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.14.2
+botocore==1.43.84
+idna==3.19
+jmespath==1.1.0
+pydantic_core==2.46.5
+python-dateutil==2.9.0.post0
+s3transfer==0.19.2
+six==1.17.0
+starlette==1.6.0
+typing_extensions==4.16.0
+typing-inspection==0.4.4
+urllib3==2.7.0

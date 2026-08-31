@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="theme-color" content="#0e0e16" />
+        <!-- 아이콘은 scripts/make_favicon.py가 16x16 격자 위에 직접 그리고,
+             큰 크기는 전부 정수배 확대로만 만든다. 축소해서 만들면 이 제품이
+             하지 말라고 말하는 일을 아이콘에서 저지르는 셈이 된다. -->
+        <link rel="icon" href="%PUBLIC_URL%/favicon.ico" sizes="16x16 32x32 48x48" />
+        <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/icon-32.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="%PUBLIC_URL%/icon-192.png" />
+        <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
+        <meta
+            name="description"
+            content="Resize pixel art at fractional scales without breaking the dot grid. PixelZoom detects the intrinsic block size of a sprite and scales it losslessly."
+        />
+        <title>PixelZoom — lossless pixel art resizing</title>
+    </head>
+    <body>
+        <noscript>PixelZoom needs JavaScript: the resizing itself runs in your browser.</noscript>
+        <div id="root"></div>
+    </body>
+</html>

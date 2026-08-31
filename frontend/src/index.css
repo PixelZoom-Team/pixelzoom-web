@@ -1,0 +1,11 @@
+/* styled-components가 붙기 전 첫 페인트에서도 배경이 어둡도록 여기서 칠한다.
+   이게 없으면 로딩 순간 흰 화면이 한 번 번쩍인다. */
+html {
+    background: #0e0e16;
+}
+
+body {
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

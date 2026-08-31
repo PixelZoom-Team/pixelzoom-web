@@ -1,0 +1,11 @@
+# 개발은 Windows, CI와 Lambda는 Linux다. 규칙이 없으면 같은 파일이 기기마다
+# 다른 줄바꿈으로 커밋돼 diff가 통째로 바뀐 것처럼 보인다.
+* text=auto
+
+# 아래는 절대 텍스트로 다루면 안 된다. 줄바꿈 변환이 끼어들면 폰트와 이미지가
+# 조용히 깨진다 — 깨진 뒤에는 원인을 찾기 어렵다.
+*.png   binary
+*.ico   binary
+*.woff2 binary
+*.pdf   binary
+*.zip   binary

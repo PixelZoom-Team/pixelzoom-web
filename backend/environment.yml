@@ -1,0 +1,18 @@
+# conda로는 인터프리터만 만들고, 패키지는 pip으로 넣는다.
+#
+# conda 채널의 opencv/numpy 빌드를 쓰면 Lambda 이미지에 들어가는 PyPI 휠과
+# 다른 바이너리로 개발하게 된다. 로컬과 배포의 드리프트를 줄이자고 한 일이
+# (ADR-008) 오히려 새 드리프트를 만드는 셈이라, 의존성은 requirements.txt
+# 하나만 진실의 원천으로 둔다.
+#
+#   conda env create -f environment.yml
+#   conda activate pixelzoom
+name: pixelzoom
+channels:
+  - defaults
+dependencies:
+  # Lambda base 이미지(public.ecr.aws/lambda/python:3.13-arm64)와 같은 버전.
+  - python=3.13
+  - pip
+  - pip:
+      - -r requirements-dev.txt
