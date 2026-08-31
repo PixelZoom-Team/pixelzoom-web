@@ -22,6 +22,26 @@ locals {
   oidc_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : data.aws_iam_openid_connect_provider.github[0].arn
 }
 
+locals {
+  repo_owner = split("/", var.github_repository)[0]
+  repo_name  = split("/", var.github_repository)[1]
+
+  # GitHub이 sub에 불변 ID를 넣는 형식을 쓰는지에 따라 갈린다.
+  #
+  # **저장소 ID는 와일드카드로 둔다.** 저장소를 지웠다 다시 만들면 ID가
+  # 바뀌는데, 그때 나오는 오류가 "Not authorized to perform
+  # sts:AssumeRoleWithWebIdentity" 하나뿐이라 원인을 찾기가 매우 어렵다.
+  # 조직 ID는 그대로 박아 두므로, 다른 조직이 같은 이름으로 흉내 내는 것은
+  # 여전히 막힌다. 같은 조직 안에서 저장소를 다시 만들 수 있는 사람은
+  # 어차피 이 역할도 고칠 수 있는 관리자다.
+  github_subject = var.github_owner_id == "" ? (
+    "repo:${var.github_repository}:ref:${var.github_ref}"
+    ) : (
+    "repo:${local.repo_owner}@${var.github_owner_id}/${local.repo_name}@*:ref:${var.github_ref}"
+  )
+
+  github_subject_test = var.github_owner_id == "" ? "StringEquals" : "StringLike"
+}
 data "aws_iam_policy_document" "deploy_assume" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -40,16 +60,22 @@ data "aws_iam_policy_document" "deploy_assume" {
     # sub를 저장소와 브랜치까지 좁힌다. `repo:*`처럼 두면 GitHub의 어떤
     # 저장소든 이 역할을 집어갈 수 있다 — OIDC를 쓰는 의미가 사라진다.
     condition {
-      test     = "StringEquals"
+      test     = local.github_subject_test
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:ref:${var.github_ref}"]
+      values   = [local.github_subject]
     }
   }
 }
 
 resource "aws_iam_role" "deploy" {
-  name               = "${local.name}-github-deploy"
-  description        = "GitHub Actions 배포용. ${var.github_repository} ${var.github_ref} 에서만."
+  name = "${local.name}-github-deploy"
+
+  # IAM의 description은 ASCII와 Latin-1 범위만 받는다. 한글을 넣으면
+  # CreateRole이 ValidationError로 거절한다. 이 저장소의 다른 설명은 한국어지만
+  # 여기만은 영어여야 한다 — ECR과 CloudFront는 UTF-8을 받아 주기 때문에
+  # 헷갈리기 쉬운 지점이다.
+  description = "GitHub Actions deploy role. Assumable only from ${var.github_repository} at ${var.github_ref}."
+
   assume_role_policy = data.aws_iam_policy_document.deploy_assume.json
 }
 

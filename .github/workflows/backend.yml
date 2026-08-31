@@ -41,20 +41,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── 임시 진단 ──────────────────────────────────────────────
-      # AssumeRoleWithWebIdentity가 거절당하는 이유를 좁힌다. 토큰 자체는
-      # 찍지 않고 sub/aud 등 클레임만 본다. 원인을 확인하면 이 단계는 지운다.
-      - name: OIDC claims (temporary)
-        env:
-          ROLE: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-        run: |
-          echo "AWS_REGION  = '${{ vars.AWS_REGION }}'"
-          echo "ROLE length = ${#ROLE}  (기대 54. 56이면 따옴표가 값에 들어간 것)"
-          echo "ROLE prefix = ${ROLE:0:12}"
-          echo '--- token claims ---'
-          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | python3 -c "import sys,json;print(json.load(sys.stdin)['value'])")
-          echo "$TOKEN" | cut -d. -f2 | python3 -c "import sys,base64,json;p=sys.stdin.read().strip();p+='='*(-len(p)%4);c=json.loads(base64.urlsafe_b64decode(p));print(json.dumps({k:c.get(k) for k in ('sub','aud','repository','repository_owner','ref','event_name')},indent=2))"
-      # ── 임시 진단 끝 ────────────────────────────────────────────
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}

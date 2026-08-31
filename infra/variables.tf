@@ -68,6 +68,26 @@ variable "github_ref" {
   default     = "refs/heads/main"
 }
 
+variable "github_owner_id" {
+  description = <<-EOT
+    조직(또는 사용자)의 숫자 ID. 비워 두면 예전 형식의 sub를 쓴다.
+
+    GitHub은 OIDC 토큰의 sub 클레임에 조직과 저장소의 **불변 ID**를 함께
+    넣는다. 저장소를 지웠다 같은 이름으로 다시 만들어 신뢰를 가로채는 것을
+    막기 위한 것이고, 새로 만든 조직에는 기본으로 켜져 있다.
+
+        예전:  repo:OWNER/REPO:ref:refs/heads/main
+        지금:  repo:OWNER@1234/REPO@5678:ref:refs/heads/main
+
+    확인:
+        curl -s https://api.github.com/repos/OWNER/REPO | jq .owner.id
+
+    저장소 ID는 신뢰 정책에서 와일드카드로 둔다(github_oidc.tf 참고).
+  EOT
+  type        = string
+  default     = ""
+}
+
 variable "create_oidc_provider" {
   description = <<-EOT
     GitHub OIDC 공급자를 이 스택이 만들지 여부.
