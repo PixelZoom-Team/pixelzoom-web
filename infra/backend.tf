@@ -152,3 +152,20 @@ resource "aws_lambda_function_url" "api" {
   # 두 번 실려 브라우저가 오히려 요청을 막는다. 허용 오리진은 위의 환경변수
   # 하나로만 정한다.
 }
+
+# authorization_type = "NONE"만으로는 열리지 않는다. 리소스 기반 정책이 함께
+# 있어야 인증 없는 호출이 허용되며, 없으면 모든 요청이 403으로 떨어진다.
+#
+# 콘솔에서 Function URL을 만들면 AWS가 이 권한을 자동으로 붙여 주기 때문에
+# 눈에 띄지 않지만, Terraform의 aws_lambda_function_url은 붙이지 않는다.
+#
+# principal이 "*"인 것은 이 API가 공개 API이기 때문이다. 브라우저에서 직접
+# 호출하므로 SigV4로 서명할 방법이 없다. 실제 보호는 CORS 허용 오리진과
+# 업로드·화소 상한이 맡는다.
+resource "aws_lambda_permission" "function_url" {
+  statement_id           = "AllowPublicFunctionUrlInvoke"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.api.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
