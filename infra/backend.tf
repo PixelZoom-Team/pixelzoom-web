@@ -174,10 +174,12 @@ resource "aws_lambda_permission" "function_url" {
   function_url_auth_type = "NONE"
 }
 
+# InvokeFunction에는 FunctionUrlAuthType 조건을 붙일 수 없다(AWS가 거절한다).
+# 조건 없는 * 허용이라 함수 URL을 거치지 않는 직접 호출까지 열리는 셈이므로,
+# 403이 풀리는지 확인한 뒤 정말 필요한지 다시 따져야 한다. 필요 없다면 지운다.
 resource "aws_lambda_permission" "function_url_invoke" {
-  statement_id           = "AllowPublicFunctionInvoke"
-  action                 = "lambda:InvokeFunction"
-  function_name          = aws_lambda_function.api.function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
+  statement_id  = "AllowPublicFunctionInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  principal     = "*"
 }
