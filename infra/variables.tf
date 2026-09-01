@@ -128,18 +128,27 @@ variable "lambda_memory_mb" {
 
 variable "reserved_concurrency" {
   description = <<-EOT
-    동시에 돌 수 있는 실행 수의 상한. -1이면 제한하지 않는다.
+    동시에 돌 수 있는 실행 수의 상한. -1이면 예약하지 않는다.
 
     함수 URL을 공개로 열려면 InvokeFunction을 조건 없이 * 에 허용해야 하고,
     그러면 함수 URL을 거치지 않는 직접 호출까지 열린다. 이 API는 브라우저에서
-    서명 없이 호출되므로 애초에 인증으로 막을 수 있는 것이 아니다. 그래서
-    막는 대신 **남용의 상한**을 둔다.
+    서명 없이 호출되므로 애초에 인증으로 막을 수 있는 것이 아니라, 막는 대신
+    남용의 상한을 두려 했다.
 
-    20이면 요청당 0.1초 기준 초당 200건까지 감당하면서, 누가 두들겨도 비용이
-    폭주하지 않는다. 정상 트래픽이 이 상한에 닿는 일은 없다.
+    **기본값이 -1인 이유.** 새 AWS 계정은 계정 전체 동시 실행 한도가 낮게
+    잡혀 있어서, 예약을 걸면 미예약 몫이 최소치 아래로 떨어져 AWS가 거절한다.
+
+        InvalidParameterValueException: Specified ReservedConcurrentExecutions
+        for function decreases account's UnreservedConcurrentExecution below
+        its minimum value of [10].
+
+    다행히 그 낮은 계정 한도가 이미 상한 역할을 한다 — 이 계정에서는 무엇을
+    해도 그 이상 동시에 돌지 않는다. 나중에 한도를 올리면 그때 이 값을 정해
+    함수 단위로 다시 좁히면 된다. 현재 한도는 `aws lambda get-account-settings`로
+    확인한다.
   EOT
   type        = number
-  default     = 20
+  default     = -1
 }
 
 variable "lambda_timeout" {
