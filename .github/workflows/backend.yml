@@ -2,6 +2,9 @@ name: backend
 
 # ADR-004의 path 필터. 백엔드가 바뀌지 않은 커밋은 이 워크플로를 아예 돌리지 않는다.
 on:
+  # 코드를 바꾸지 않고도 다시 돌릴 수 있게 열어 둔다. 배포가 외부 사정으로
+  # 실패했을 때(자격 증명 미설정, 일시적 오류) 빈 커밋을 만들지 않아도 된다.
+  workflow_dispatch:
   pull_request:
     paths:
       - 'backend/**'
@@ -32,7 +35,7 @@ jobs:
 
   deploy:
     needs: test
-    if: github.event_name == 'push'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       # OIDC로 AWS에 인증한다. 장기 액세스 키를 저장소에 두지 않기 위함이다.

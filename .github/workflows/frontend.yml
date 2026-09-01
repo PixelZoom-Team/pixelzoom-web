@@ -1,6 +1,9 @@
 name: frontend
 
 on:
+  # 코드를 바꾸지 않고도 다시 돌릴 수 있게 열어 둔다. 배포가 외부 사정으로
+  # 실패했을 때(자격 증명 미설정, 일시적 오류) 빈 커밋을 만들지 않아도 된다.
+  workflow_dispatch:
   pull_request:
     paths:
       - 'frontend/**'
@@ -46,14 +49,14 @@ jobs:
           REACT_APP_API_BASE_URL: ${{ vars.API_BASE_URL }}
         run: npm run build
 
-      - if: github.event_name == 'push'
+      - if: github.event_name != 'pull_request'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Publish to S3
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         run: |
           # 해시가 박힌 정적 자산은 오래 캐시해도 안전하다.
           aws s3 sync build/static "s3://${{ vars.S3_BUCKET }}/static" \
@@ -63,7 +66,7 @@ jobs:
             --delete --exclude "static/*" --cache-control "no-cache"
 
       - name: Invalidate CloudFront
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
         run: |
           aws cloudfront create-invalidation \
             --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
