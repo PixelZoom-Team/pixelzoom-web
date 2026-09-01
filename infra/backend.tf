@@ -118,6 +118,9 @@ resource "aws_lambda_function" "api" {
   memory_size = var.lambda_memory_mb
   timeout     = var.lambda_timeout
 
+  # 공개 엔드포인트의 남용 상한. 근거는 variables.tf에 적어 두었다.
+  reserved_concurrent_executions = var.reserved_concurrency
+
   environment {
     variables = {
       # 원본의 allow_origins=["*"]는 쓰지 않는다. 실제 사이트 주소 하나만 연다.
@@ -162,21 +165,30 @@ resource "aws_lambda_function_url" "api" {
 # principal이 "*"인 것은 이 API가 공개 API이기 때문이다. 브라우저에서 직접
 # 호출하므로 SigV4로 서명할 방법이 없다. 실제 보호는 CORS 허용 오리진과
 # 업로드·화소 상한이 맡는다.
-# 이 권한 하나면 된다. 콘솔은 InvokeFunction도 함께 요구한다고 안내하지만,
-# 실제로 넣었다 빼 봤을 때 없어도 200이었다.
+# **두 권한이 모두 있어야 열린다.** InvokeFunctionUrl 하나만으로는 정책·AuthType·
+# 함수 상태가 전부 정상인데도 모든 요청이 AccessDeniedException으로 떨어진다.
+# AWS 문서의 예시에는 InvokeFunctionUrl만 나오지만, 콘솔의 함수 URL 화면은
+# "invokeFunction 및 invokeFunctionUrl 권한을 모든 보안 주체에 부여하라"고
+# 안내한다. 콘솔 쪽이 맞다.
 #
-# 다만 **처음 만들 때 403이 한동안 이어질 수 있다.** 권한을 추가한 뒤에도 25분
-# 넘게 403이 계속되다가, 정책을 한 번 더 건드리자 그때 열렸다. Lambda가 함수
-# URL의 인가 판단을 캐시하고 첫 추가로는 그 캐시가 갱신되지 않은 것으로 보이나,
-# 확인한 것은 "정책이 한 번 더 바뀌자 열렸다"까지이고 내부 동작은 추측이다.
-#
-# 그때의 증상은 정책·AuthType·함수 상태·조직 정책이 전부 정상인데 모든 요청이
-# AccessDeniedException으로 떨어지는 것이다. 이 주석이 없으면 다음 사람도
-# 같은 곳에서 한참 헤맨다.
+# 넣었다 뺐다 하며 확인했다. 주의할 것은 **Lambda가 인가 결과를 캐시한다는
+# 점**이다. 권한을 지운 직후에는 잠시 200이 유지되다가 몇 분 뒤 403으로
+# 돌아간다. 지우고 바로 확인하면 "없어도 되네"라는 잘못된 결론에 이른다.
 resource "aws_lambda_permission" "function_url" {
   statement_id           = "AllowPublicFunctionUrlInvoke"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.api.function_name
   principal              = "*"
   function_url_auth_type = "NONE"
+}
+
+# InvokeFunction에는 FunctionUrlAuthType 조건을 붙일 수 없다 — AWS가 거절한다.
+# 그래서 조건 없는 * 허용이 되고, 함수 URL을 거치지 않는 직접 호출까지 열린다.
+# 이 API는 어차피 공개이고 브라우저에서 서명 없이 호출되므로 인증으로 막을 수
+# 있는 것이 아니다. 남용의 상한은 아래 reserved_concurrent_executions가 맡는다.
+resource "aws_lambda_permission" "function_url_invoke" {
+  statement_id  = "AllowPublicFunctionInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.api.function_name
+  principal     = "*"
 }
