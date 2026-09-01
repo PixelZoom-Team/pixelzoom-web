@@ -162,9 +162,21 @@ resource "aws_lambda_function_url" "api" {
 # principal이 "*"인 것은 이 API가 공개 API이기 때문이다. 브라우저에서 직접
 # 호출하므로 SigV4로 서명할 방법이 없다. 실제 보호는 CORS 허용 오리진과
 # 업로드·화소 상한이 맡는다.
+# **두 권한이 모두 필요하다.** InvokeFunctionUrl만 주면 정책은 완벽해 보이는데도
+# 모든 요청이 403으로 떨어진다. 콘솔의 함수 URL 화면이 "invokeFunction 및
+# invokeFunctionUrl 권한을 모든 보안 주체에 부여하라"고 알려 주기 전까지는
+# 정책·AuthType·함수 상태가 전부 정상이라 원인을 짚기 어렵다.
 resource "aws_lambda_permission" "function_url" {
   statement_id           = "AllowPublicFunctionUrlInvoke"
   action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.api.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
+resource "aws_lambda_permission" "function_url_invoke" {
+  statement_id           = "AllowPublicFunctionInvoke"
+  action                 = "lambda:InvokeFunction"
   function_name          = aws_lambda_function.api.function_name
   principal              = "*"
   function_url_auth_type = "NONE"
