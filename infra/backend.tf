@@ -162,24 +162,21 @@ resource "aws_lambda_function_url" "api" {
 # principal이 "*"인 것은 이 API가 공개 API이기 때문이다. 브라우저에서 직접
 # 호출하므로 SigV4로 서명할 방법이 없다. 실제 보호는 CORS 허용 오리진과
 # 업로드·화소 상한이 맡는다.
-# **두 권한이 모두 필요하다.** InvokeFunctionUrl만 주면 정책은 완벽해 보이는데도
-# 모든 요청이 403으로 떨어진다. 콘솔의 함수 URL 화면이 "invokeFunction 및
-# invokeFunctionUrl 권한을 모든 보안 주체에 부여하라"고 알려 주기 전까지는
-# 정책·AuthType·함수 상태가 전부 정상이라 원인을 짚기 어렵다.
+# 이 권한 하나면 된다. 콘솔은 InvokeFunction도 함께 요구한다고 안내하지만,
+# 실제로 넣었다 빼 봤을 때 없어도 200이었다.
+#
+# 다만 **처음 만들 때 403이 한동안 이어질 수 있다.** 권한을 추가한 뒤에도 25분
+# 넘게 403이 계속되다가, 정책을 한 번 더 건드리자 그때 열렸다. Lambda가 함수
+# URL의 인가 판단을 캐시하고 첫 추가로는 그 캐시가 갱신되지 않은 것으로 보이나,
+# 확인한 것은 "정책이 한 번 더 바뀌자 열렸다"까지이고 내부 동작은 추측이다.
+#
+# 그때의 증상은 정책·AuthType·함수 상태·조직 정책이 전부 정상인데 모든 요청이
+# AccessDeniedException으로 떨어지는 것이다. 이 주석이 없으면 다음 사람도
+# 같은 곳에서 한참 헤맨다.
 resource "aws_lambda_permission" "function_url" {
   statement_id           = "AllowPublicFunctionUrlInvoke"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.api.function_name
   principal              = "*"
   function_url_auth_type = "NONE"
-}
-
-# InvokeFunction에는 FunctionUrlAuthType 조건을 붙일 수 없다(AWS가 거절한다).
-# 조건 없는 * 허용이라 함수 URL을 거치지 않는 직접 호출까지 열리는 셈이므로,
-# 403이 풀리는지 확인한 뒤 정말 필요한지 다시 따져야 한다. 필요 없다면 지운다.
-resource "aws_lambda_permission" "function_url_invoke" {
-  statement_id  = "AllowPublicFunctionInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  principal     = "*"
 }
